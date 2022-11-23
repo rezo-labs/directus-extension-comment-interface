@@ -1,0 +1,7 @@
+node_modules/
+src/
+screenshots/
+.env
+tsconfig.json
+babel.config.js
+.prettierrc

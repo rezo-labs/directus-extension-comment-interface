@@ -2,7 +2,7 @@
 	<div class="comment-item">
 		<comment-item-header :refresh="refresh" :activity="activity" @edit="editing = true" />
 
-		<div class="content selectable">{{ activity.comment }}</div>
+		<div v-md="{ value: activity.display, target: '_blank' }" class="content selectable" />
 	</div>
 </template>
 

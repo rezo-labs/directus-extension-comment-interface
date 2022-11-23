@@ -26,9 +26,17 @@
 import { useI18n } from 'vue-i18n';
 import { useApi } from '@directus/shared/composables';
 import { defineComponent, ref } from 'vue';
-import { groupBy, orderBy } from 'lodash';
+import { groupBy, orderBy, flatten } from 'lodash';
 import { isToday, isYesterday, format } from 'date-fns';
 import CommentItem from './comment-item.vue';
+import { userName } from './utils';
+import { Activity, ActivityByDate } from './types';
+
+type ActivityByDateDisplay = ActivityByDate & {
+	activity: (Activity & {
+		display: string;
+	})[];
+};
 
 export default defineComponent({
 	components: {
@@ -48,10 +56,12 @@ export default defineComponent({
 		const { t } = useI18n();
 		const api = useApi();
 
-		const activity = ref<Record<string, any>[] | null>(null);
+		const regex = /\s@[a-zA-Z0-9]{8}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{4}-[a-zA-Z0-9]{12}/gm;
+		const activity = ref<ActivityByDateDisplay[] | null>(null);
 		const count = ref(0);
 		const error = ref(null);
 		const loading = ref(false);
+		const userPreviews = ref<Record<string, any>>({});
 
 		getActivity();
 
@@ -85,7 +95,20 @@ export default defineComponent({
 
 				count.value = response.data.data.length;
 
-				const activityByDate = groupBy(response.data.data, (activity) => {
+				userPreviews.value = await loadUserPreviews(response.data.data, regex);
+
+				const activityWithUsersInComments = (response.data.data as Activity[]).map((comment) => {
+					const display = (comment.comment as string).replace(
+						regex,
+						(match) => `<mark>${userPreviews.value[match.substring(2)]}</mark>`
+					);
+					return {
+						...comment,
+						display,
+					};
+				});
+
+				const activityByDate = groupBy(activityWithUsersInComments, (activity) => {
 					// activity's timestamp date is in iso-8601
 					const date = new Date(new Date(activity.timestamp).toDateString());
 					return date;
@@ -121,6 +144,37 @@ export default defineComponent({
 
 		async function refresh() {
 			await getActivity();
+		}
+
+		async function loadUserPreviews(comments: Record<string, any>, regex: RegExp) {
+			let userPreviews: any[] = [];
+
+			comments.forEach((comment: Record<string, any>) => {
+				userPreviews.push(comment.comment.match(regex));
+			});
+
+			const uniqIds: string[] = [...new Set(flatten(userPreviews))].filter((id) => {
+				if (id) return id;
+			});
+
+			if (uniqIds.length > 0) {
+				const response = await api.get('/users', {
+					params: {
+						filter: { id: { _in: uniqIds.map((id) => id.substring(2)) } },
+						fields: ['first_name', 'last_name', 'email', 'id'],
+					},
+				});
+
+				const userPreviews: Record<string, string> = {};
+
+				response.data.data.map((user: Record<string, any>) => {
+					userPreviews[user.id] = userName(user, t);
+				});
+
+				return userPreviews;
+			}
+
+			return {};
 		}
 	},
 });

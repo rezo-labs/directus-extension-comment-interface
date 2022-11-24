@@ -65,7 +65,7 @@ export default defineComponent({
 
 		getActivity();
 
-		return { activity, count, error, loading, getActivity, refresh };
+		return { t, activity, count, error, loading, userPreviews, getActivity, refresh };
 
 		async function getActivity() {
 			error.value = null;

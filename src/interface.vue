@@ -19,6 +19,8 @@
 				/>
 			</template>
 		</template>
+
+		<comment-input :collection="collection" :primary-key="primaryKey" :refresh="refresh" />
 	</div>
 </template>
 
@@ -29,6 +31,7 @@ import { defineComponent, ref } from 'vue';
 import { groupBy, orderBy, flatten } from 'lodash';
 import { isToday, isYesterday, format } from 'date-fns';
 import CommentItem from './comment-item.vue';
+import CommentInput from './comment-input.vue';
 import { userName } from './utils';
 import { Activity, ActivityByDate } from './types';
 
@@ -39,8 +42,10 @@ type ActivityByDateDisplay = ActivityByDate & {
 };
 
 export default defineComponent({
+	inheritAttrs: false,
 	components: {
 		CommentItem,
+		CommentInput,
 	},
 	props: {
 		collection: {
@@ -77,7 +82,7 @@ export default defineComponent({
 						'filter[collection][_eq]': props.collection,
 						'filter[item][_eq]': props.primaryKey,
 						'filter[action][_eq]': 'comment',
-						sort: '-id', // directus_activity has auto increment and is therefore in chronological order
+						sort: 'id', // directus_activity has auto increment and is therefore in chronological order
 						fields: [
 							'id',
 							'action',

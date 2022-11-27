@@ -106,7 +106,7 @@ export default defineComponent({
 					const display = (comment.comment as string).replace(
 						regex,
 						(match) => `<mark>${userPreviews.value[match.substring(2)]}</mark>`
-					);
+					).replace(/\n/g, '<br />');
 					return {
 						...comment,
 						display,

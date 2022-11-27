@@ -2,17 +2,27 @@
 	<div class="comment-item">
 		<comment-item-header :refresh="refresh" :activity="activity" @edit="editing = true" />
 
-		<div v-md="{ value: activity.display, target: '_blank' }" class="content selectable" />
+		<comment-input
+			v-if="editing"
+			:existing-comment="activity"
+			:primary-key="primaryKey"
+			:collection="collection"
+			:refresh="refresh"
+			:previews="userPreviews"
+			@cancel="cancelEditing"
+		/>
+
+		<div v-else v-md="{ value: activity.display, target: '_blank' }" class="content selectable" />
 	</div>
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { Activity } from './types';
-import { useApi } from '@directus/shared/composables';
 import CommentItemHeader from './comment-item-header.vue';
+import CommentInput from './comment-input.vue';
 
-interface Props {
+const props = withDefaults(defineProps<{
 	activity: Activity & {
 		display: string;
 	};
@@ -20,49 +30,14 @@ interface Props {
 	collection: string;
 	primaryKey: string | number;
 	userPreviews: Record<string, any>;
-}
-
-const props = withDefaults(defineProps<Props>(), {
+}>(), {
 	userPreviews: () => ({}),
 });
 
-const api = useApi();
+const editing = ref(false);
 
-const { editing, cancelEditing } = useEdits();
-
-function useEdits() {
-	const edits = ref(props.activity.comment);
-	const editing = ref(false);
-	const savingEdits = ref(false);
-
-	watch(
-		() => props.activity,
-		() => (edits.value = props.activity.comment)
-	);
-
-	return { edits, editing, savingEdits, saveEdits, cancelEditing };
-
-	async function saveEdits() {
-		savingEdits.value = true;
-
-		try {
-			await api.patch(`/activity/comment/${props.activity.id}`, {
-				comment: edits.value,
-			});
-
-			props.refresh();
-		} catch (err: any) {
-
-		} finally {
-			savingEdits.value = false;
-			editing.value = false;
-		}
-	}
-
-	function cancelEditing() {
-		edits.value = props.activity.comment;
-		editing.value = false;
-	}
+function cancelEditing() {
+	editing.value = false;
 }
 </script>
 

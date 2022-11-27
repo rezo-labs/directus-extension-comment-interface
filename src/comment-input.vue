@@ -4,7 +4,7 @@
 			<template #activator>
 				<v-template-input
 					ref="commentElement"
-					v-model="commentContent"
+					v-model="newCommentContent"
 					capture-group="(@[0-9A-F]{8}-[0-9A-F]{4}-4[0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12})"
 					multiline
 					trigger-character="@"
@@ -50,7 +50,7 @@
 				{{ t('cancel') }}
 			</v-button>
 			<v-button
-				:disabled="!commentContent || commentContent.trim() === ''"
+				:disabled="!newCommentContent || newCommentContent.trim() === ''"
 				:loading="saving"
 				class="post-comment"
 				x-small
@@ -64,21 +64,30 @@
 
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { ComponentPublicInstance, onMounted, ref } from 'vue';
+import { ComponentPublicInstance, onMounted, ref, watch } from 'vue';
 import { useApi } from '@directus/shared/composables';
-import { throttle } from 'lodash';
+import { throttle, cloneDeep } from 'lodash';
 import axios, { CancelTokenSource } from 'axios';
 import { userName, addTokenToURL, getRootPath } from './utils';
+import { Activity } from './types';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
 	refresh: () => void;
 	collection: string;
 	primaryKey: string | number;
-}>();
+	existingComment?: Activity | null;
+	previews?: Record<string, string> | null;
+}>(),
+	{
+		existingComment: () => null,
+		previews: () => null,
+	}
+);
+
+const emit = defineEmits(['cancel']);
 
 const { t } = useI18n();
 const api = useApi();
-
 const commentElement = ref<ComponentPublicInstance>();
 let lastCaretPosition = 0;
 let lastCaretOffset = 0;
@@ -92,12 +101,36 @@ onMounted(() => {
 	});
 });
 
-const commentContent = ref('');
+const newCommentContent = ref<string | null>(props.existingComment?.comment ?? null);
+
+watch(
+	() => props.existingComment,
+	() => {
+		if (props.existingComment?.comment) {
+			newCommentContent.value = props.existingComment.comment;
+		}
+	},
+	{ immediate: true }
+);
+
 const saving = ref(false);
 const showMentionDropDown = ref(false);
 
 const searchResult = ref<any[]>([]);
 const userPreviews = ref<Record<string, string>>({});
+
+watch(
+	() => props.previews,
+	() => {
+		if (props.previews) {
+			userPreviews.value = {
+				...userPreviews.value,
+				...props.previews,
+			};
+		}
+	},
+	{ immediate: true }
+);
 
 let triggerCaretPosition = 0;
 const selectedKeyboardIndex = ref<number>(0);
@@ -150,7 +183,7 @@ const loadUsers = throttle(async (name: string) => {
 			cancelToken: cancelToken.token,
 		});
 
-		const newUsers: Record<string, any> = {};
+		const newUsers = cloneDeep(userPreviews.value);
 
 		result.data.data.forEach((user: any) => {
 			newUsers[user.id] = userName(user, t);
@@ -187,15 +220,15 @@ function insertAt() {
 }
 
 function insertText(text: string) {
-	if (commentContent.value === null) {
+	if (newCommentContent.value === null) {
 		lastCaretPosition = 0;
-		commentContent.value = '';
+		newCommentContent.value = '';
 	}
 
-	commentContent.value = [
-		commentContent.value.slice(0, lastCaretPosition),
+	newCommentContent.value = [
+		newCommentContent.value.slice(0, lastCaretPosition),
 		text,
-		commentContent.value.slice(lastCaretPosition),
+		newCommentContent.value.slice(lastCaretPosition),
 	].join('');
 
 	setTimeout(() => {
@@ -208,7 +241,7 @@ function insertText(text: string) {
 }
 
 function insertUser(user: Record<string, any>) {
-	const text = commentContent.value?.replaceAll(String.fromCharCode(160), ' ');
+	const text = newCommentContent.value?.replaceAll(String.fromCharCode(160), ' ');
 	if (!text) return;
 
 	let countBefore = triggerCaretPosition - 1;
@@ -227,7 +260,7 @@ function insertUser(user: Record<string, any>) {
 	const before = text.substring(0, countBefore + (text.charAt(countBefore) === '\n' ? 1 : 0));
 	const after = text.substring(countAfter);
 
-	commentContent.value = before + ' @' + user.id + after;
+	newCommentContent.value = before + ' @' + user.id + after;
 }
 
 function triggerSearch({ searchQuery, caretPosition }: { searchQuery: string; caretPosition: number }) {
@@ -244,30 +277,41 @@ function avatarSource(url: string) {
 }
 
 async function postComment() {
-	if (!commentContent.value) {
+	if (!newCommentContent.value) {
 		return;
 	}
 	saving.value = true;
 
 	try {
-		await api.post(`/activity/comment`, {
-			collection: props.collection,
-			item: props.primaryKey,
-			comment: commentContent.value,
-		});
+		if (props.existingComment) {
+			await api.patch(`/activity/comment/${props.existingComment.id}`, {
+				comment: newCommentContent.value,
+			});
+		} else {
+			await api.post(`/activity/comment`, {
+				collection: props.collection,
+				item: props.primaryKey,
+				comment: newCommentContent.value,
+			});
+		}
 
 		props.refresh();
 
-		commentContent.value = '';
+		newCommentContent.value = '';
 	} catch (err: any) {
 
 	} finally {
 		saving.value = false;
+		emit('cancel');
 	}
 }
 
 function cancel() {
-	commentContent.value = '';
+	if (props.existingComment) {
+		emit('cancel');
+	} else {
+		newCommentContent.value = '';
+	}
 }
 
 function pressedUp() {

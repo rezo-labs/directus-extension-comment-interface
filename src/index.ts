@@ -13,7 +13,7 @@ export default defineInterface({
 			name: 'Refresh Interval',
 			type: 'integer',
 			meta: {
-				width: 'full',
+				width: 'half',
 				interface: 'input',
 				options: {
 					placeholder: '10',
@@ -22,6 +22,24 @@ export default defineInterface({
 			},
 			schema: {
 				default_value: 10,
+			},
+		},
+		{
+			field: 'sortDirection',
+			name: 'Sort Direction',
+			type: 'string',
+			meta: {
+				width: 'half',
+				interface: 'select-dropdown',
+				options: {
+					choices: [
+						{ text: 'Ascending', value: 'asc' },
+						{ text: 'Descending', value: 'desc' },
+					],
+				},
+			},
+			schema: {
+				default_value: 'asc',
 			},
 		},
 	],

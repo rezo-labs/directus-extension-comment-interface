@@ -60,6 +60,10 @@ export default defineComponent({
 			type: Number,
 			default: 10,
 		},
+		sortDirection: {
+			type: String,
+			default: 'asc',
+		},
 	},
 	setup(props) {
 		const { t } = useI18n();
@@ -105,7 +109,7 @@ export default defineComponent({
 						'filter[collection][_eq]': props.collection,
 						'filter[item][_eq]': props.primaryKey,
 						'filter[action][_eq]': 'comment',
-						sort: 'id', // directus_activity has auto increment and is therefore in chronological order
+						sort: props.sortDirection === 'asc' ? 'id' : '-id',
 						fields: [
 							'id',
 							'action',
@@ -162,7 +166,7 @@ export default defineComponent({
 					});
 				}
 
-				activity.value = orderBy(activityGrouped, ['date'], ['asc']);
+				activity.value = orderBy(activityGrouped, ['date'], [props.sortDirection]);
 			} catch (error: any) {
 				error.value = error;
 			} finally {

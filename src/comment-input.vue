@@ -103,16 +103,6 @@ onMounted(() => {
 
 const newCommentContent = ref<string | null>(props.existingComment?.comment ?? null);
 
-watch(
-	() => props.existingComment,
-	() => {
-		if (props.existingComment?.comment) {
-			newCommentContent.value = props.existingComment.comment;
-		}
-	},
-	{ immediate: true }
-);
-
 const saving = ref(false);
 const showMentionDropDown = ref(false);
 

@@ -27,7 +27,7 @@
 <script lang="ts">
 import { useI18n } from 'vue-i18n';
 import { useApi } from '@directus/shared/composables';
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import { groupBy, orderBy, flatten } from 'lodash';
 import { isToday, isYesterday, format } from 'date-fns';
 import CommentItem from './comment-item.vue';
@@ -56,6 +56,10 @@ export default defineComponent({
 			type: [String, Number],
 			default: null,
 		},
+		refreshInterval: {
+			type: Number,
+			default: 10,
+		},
 	},
 	setup(props) {
 		const { t } = useI18n();
@@ -69,6 +73,25 @@ export default defineComponent({
 		const userPreviews = ref<Record<string, any>>({});
 
 		getActivity();
+
+		const activeInterval = ref<NodeJS.Timeout | null>(null);
+
+		watch(
+			() => props.refreshInterval,
+			(newInterval) => {
+				if (activeInterval.value !== null) {
+					clearInterval(activeInterval.value);
+				}
+				if (newInterval !== null && newInterval > 0) {
+					activeInterval.value = setInterval(() => {
+						if (!loading.value) {
+							getActivity();
+						}
+					}, newInterval * 1000);
+				}
+			},
+			{ immediate: true }
+		);
 
 		return { t, activity, count, error, loading, userPreviews, getActivity, refresh };
 

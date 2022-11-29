@@ -1,6 +1,6 @@
 <template>
 	<div>
-		<v-progress-linear v-if="loading" indeterminate />
+		<comment-input v-if="sortDirection === 'desc'" :collection="collection" :primary-key="primaryKey" :refresh="refresh" />
 
 		<div v-else-if="!activity || activity.length === 0" class="empty">
 			<div class="content">{{ t('no_comments') }}</div>
@@ -20,7 +20,7 @@
 			</template>
 		</template>
 
-		<comment-input :collection="collection" :primary-key="primaryKey" :refresh="refresh" />
+		<comment-input v-if="sortDirection === 'asc'" :collection="collection" :primary-key="primaryKey" :refresh="refresh" />
 	</div>
 </template>
 

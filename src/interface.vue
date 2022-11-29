@@ -27,7 +27,7 @@
 <script lang="ts">
 import { useI18n } from 'vue-i18n';
 import { useApi } from '@directus/shared/composables';
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, onBeforeUnmount, ref, watch } from 'vue';
 import { groupBy, orderBy, flatten } from 'lodash';
 import { isToday, isYesterday, format } from 'date-fns';
 import CommentItem from './comment-item.vue';
@@ -96,6 +96,12 @@ export default defineComponent({
 			},
 			{ immediate: true }
 		);
+
+		onBeforeUnmount(() => {
+			if (activeInterval.value !== null) {
+				clearInterval(activeInterval.value);
+			}
+		});
 
 		return { t, activity, count, error, loading, userPreviews, getActivity, refresh };
 

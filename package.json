@@ -1,6 +1,6 @@
 {
 	"name": "directus-extension-comment-interface",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Show comments in the form",
 	"author": {
 		"email": "duydvu98@gmail.com",
